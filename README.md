@@ -29,6 +29,9 @@ On this repository, you will also find the Word document 'TCC I Kenneth De Coste
 
 ### Images
 Prediction of player K.Mpabbé
+
 ![application](https://i.ibb.co/dcf0GsK/application-TCC.png)
+
 The actual fee paid for K.Mpabbé, the tool predicted the fee with an accuracy of 91%.
+
 ![result](https://i.ibb.co/3RZNvvz/result-TCC.png)
