@@ -1,34 +1,47 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 # Importação de pacotes
-import pandas as pd
 import re
 from sklearn.linear_model import LinearRegression
 from yellowbrick.regressor import ResidualsPlot
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
+from scipy import stats
+from statistics import mode
 
 
-# In[2]:
+# In[ ]:
 
 
-# Importar o dataset
 dataset_1 = pd.read_excel("D:\Software Engineering\TCC\DATASET_2019_OFFICIAL.xlsx" ,usecols = "A,B,C,D,E,F,G,H,J,U,BF,BG,BH")
 
 
-# In[3]:
+# In[ ]:
 
 
-# Formatar os datasets
-dataset_1 = dataset_1.loc[dataset_1['Fee'].notnull()]    # Remover as linhas sem valor na coluna 'Fee'
-dataset_1['Fee'] = dataset_1['Fee'].astype(int)  # Converter a coluna 'Fee' do tipo float para int
+dataset_1.head()
 
-for i in range (0, len(dataset_1['ID']),1):       # Convertendo a coluna 'Value' do String para um valor númerico igual à coluna 'Fee'
+
+# In[ ]:
+
+
+# Tratamento do campo 'Fee'
+dataset_1 = dataset_1.loc[dataset_1.Fee.notnull()]  
+dataset_1.Fee = dataset_1.Fee.astype(int)  
+dataset_1.head()
+
+
+# In[ ]:
+
+
+# Tratamento do campo 'Value'
+for i in range (0, len(dataset_1.ID),1):       
     dataset_1.iloc[i,7]=dataset_1.iloc[i,7][1:]    # Remover o símbolo'€'
     if 'M' in dataset_1.iloc[i,7]:
         dataset_1.iloc[i,7] = dataset_1.iloc[i,7].replace('M','')   # Remover a letra 'M'
@@ -38,24 +51,60 @@ for i in range (0, len(dataset_1['ID']),1):       # Convertendo a coluna 'Value'
         else:
             dataset_1.iloc[i,7] = dataset_1.iloc[i,7]+'000000'
     else:
-        dataset_1.iloc[i,7] = dataset_1.iloc[i,7].replace('K','')
-        dataset_1.iloc[i,7] = dataset_1.iloc[i,7]+'000'   
-
-    dataset_1['Contract Valid Until'].fillna('2023', inplace=True)        # Tratar os campos sem valores (NaN/Na), usando a moda
-    
-    if (len(dataset_1.iloc[i,9]) > 4):                                  # Padronizar os campos (existem valores do tipo 'Jun 30, 2019')
-        dataset_1.iloc[i,9] = dataset_1.iloc[i,9][-4:]
+        dataset_1.iloc[i,7] = dataset_1.iloc[i,7].replace('K','') # Remover a letra 'K'
+        dataset_1.iloc[i,7] = dataset_1.iloc[i,7]+'000'  
         
-dataset_1['Value'] = dataset_1['Value'].astype(int)  # Converter a coluna 'Fee' do tipo String para int
+dataset_1.Value = dataset_1.Value.astype(int)  # Converter a coluna 'Fee' do tipo String para int     
+
+dataset_1.head()
+
+
+# In[ ]:
+
+
+# Identificar a moda do campo 'Contract Valid Until'
+moda = mode(dataset_1['Contract Valid Until'])
+moda
+
+
+# In[ ]:
+
+
+# Tratamento do campo 'Contract Valued Until'
+dataset_1['Contract Valid Until'].fillna(moda, inplace=True) # Tratar os campos sem valores (NaN/Na), usando a moda       
+
+for i in range (0, len(dataset_1.ID),1): 
+    if (len(dataset_1.iloc[i,9]) > 4):         # Padronizar os campos (existem valores do tipo 'Jun 30, 2019')
+        dataset_1.iloc[i,9] = dataset_1.iloc[i,9][-4:]   
 
 dataset_1['Contract Valid Until'] = dataset_1['Contract Valid Until'].astype('category')   # Transformar valores categoricos em valores númericos
 dataset_1['Contract Valid Until'] = dataset_1['Contract Valid Until'].cat.codes
 
-dataset_1['Best Position'] = dataset_1['Best Position'].astype('category')   # Transformar valores categoricos em valores númericos
+dataset_1.head()
+
+
+# In[ ]:
+
+
+# Tratamento do campo 'Best Position' - transformando valores categóricos em valores númericos
+dataset_1['Best Position'] = dataset_1['Best Position'].astype('category')
 dataset_1['Best Position'] = dataset_1['Best Position'].cat.codes
+dataset_1.head()
 
 
-# In[4]:
+# In[ ]:
+
+
+dataset_1.Overall.isnull().sum()
+
+
+# In[ ]:
+
+
+dataset_1.Potential.isnull().sum()
+
+
+# In[ ]:
 
 
 plt.figure(1)
@@ -84,16 +133,17 @@ plt.ylabel('')
 plt.tight_layout(pad=1.0)
 
 
-# In[5]:
+# In[ ]:
 
 
 # Normalizar a variável 'Fee'
-from scipy import stats
 fee = stats.boxcox(dataset_1.iloc[:,8])[0]
 sns.distplot(fee)
 
+Y = fee
 
-# In[6]:
+
+# In[ ]:
 
 
 # Normalizar a variável 'Value'
@@ -101,35 +151,38 @@ dataset_1['Log_value'] = np.log10(dataset_1.iloc[:,7])
 sns.distplot(dataset_1.iloc[:,13])
 
 
-# In[7]:
+# In[ ]:
 
 
 # Calcular a correlação entre as variáveis    
+
 # 1) Correlação entre 'Fee' e 'Age'
-Y = fee   # Definir a variável dependente (Y)
 X1 = dataset_1.iloc[:,2].values   # Definir a variável independente (X)
-correlacao_x1_y = np.corrcoef(X1,Y)
+correlacao_x1_y = np.corrcoef(X1,Y) # Calcular a correlação
 X1 = X1.reshape(-1,1)
-modelo = LinearRegression() # Create model
-modelo.fit(X1,Y)
-modelo.intercept_
-modelo.coef_
+
+modelo = LinearRegression() # Criar o modelo
+modelo.fit(X1,Y) # Treinar o modelo
+modelo.intercept_ # Calcular a interceptação (b)
+modelo.coef_ # Caluclar o coeficiente (a)
+
 plt.scatter(X1,Y)
-plt.plot(X1, modelo.predict(X1), color = 'red')
+plt.plot(X1, modelo.predict(X1), color = 'red') # plotar a linha de previsão
 plt.title('Correlação entre Fee e Age')
 plt.xlabel('Age')
 plt.ylabel('Fee')
+plt.savefig('fee_age.png')
 correlacao_x1_y
 
 
-# In[8]:
+# In[ ]:
 
 
 # Coeficiente de determinação entre Fee e Age
 modelo.score(X1,Y)
 
 
-# In[9]:
+# In[ ]:
 
 
 # 2) Correlação entre 'Fee' e 'Value'
@@ -148,17 +201,17 @@ plt.ylabel('Fee')
 correlacao_x2_y 
 
 
-# In[10]:
+# In[ ]:
 
 
 # Coeficiente de determinação entre Fee e Value
 modelo.score(X2,Y)
 
 
-# In[11]:
+# In[ ]:
 
 
-# 3) Correlação entre 'Fee' e 'Level'
+# 3) Correlação entre 'Fee' e 'Overall'
 X3 = dataset_1.iloc[:,4].values   # Definir a variável independente (X)
 correlacao_x3_y = np.corrcoef(X3,Y)
 X3 = X3.reshape(-1,1)
@@ -168,19 +221,20 @@ modelo.intercept_
 modelo.coef_
 plt.scatter(X3,Y)
 plt.plot(X3, modelo.predict(X3), color = 'red')
-plt.title('Correlação entre Fee e Level')   
+plt.title('Correlação entre Fee e Overall')
+plt.xlabel('Overall')
 plt.ylabel('Fee')
 correlacao_x3_y 
 
 
-# In[12]:
+# In[ ]:
 
 
 # Coeficiente de determinação entre Fee e Level
 modelo.score(X3,Y)
 
 
-# In[13]:
+# In[ ]:
 
 
 # 4) Correlação entre 'Fee' e 'Potential'
@@ -199,14 +253,14 @@ plt.ylabel('Fee')
 correlacao_x4_y 
 
 
-# In[14]:
+# In[ ]:
 
 
 # Coeficiente de determinação entre Fee e Potential
 modelo.score(X4,Y)
 
 
-# In[15]:
+# In[ ]:
 
 
 # 5) Correlação entre 'Fee' e 'Contract Valid Until'
@@ -225,14 +279,14 @@ plt.ylabel('Fee')
 correlacao_x5_y 
 
 
-# In[16]:
+# In[ ]:
 
 
 # Coeficiente de determinação entre Fee e Contract Duration
 modelo.score(X5,Y)
 
 
-# In[17]:
+# In[ ]:
 
 
 # 6) Correlação entre 'Fee' e 'Best Position'
@@ -254,14 +308,32 @@ plt.ylabel('Fee')
 correlacao_x6_y 
 
 
-# In[18]:
+# In[ ]:
 
 
 # Coeficiente de determinação entre Fee e Position
 modelo.score(X6,Y)
 
 
-# In[19]:
+# In[ ]:
+
+
+# Regressão Linear Múltipla - 3 variáveis
+X = dataset_1[['Value', 'Overall','Potential']]
+Y = dataset_1['Fee']
+modelo = LinearRegression()
+modelo.fit(X,Y)
+modelo.coef_
+
+
+# In[ ]:
+
+
+dataset_2 = dataset_1[['Name', 'Overall','Potential','Value', 'Fee']]
+dataset_2['previsoes'] = 0
+
+
+# In[ ]:
 
 
 dataset_2 = dataset_1[['Name', 'Overall','Potential','Age','Value', 'Fee']]
@@ -284,7 +356,7 @@ while (a<len(dataset_1['ID'])):
     contract = dataset_1.iloc[a,9]
     position = dataset_1.iloc[a,10]
     ##################################
-    # Regressão Linear Múltipla - 3 variáveis - com coluna Value  [prev_1]
+    # Regressão Linear Múltipla - 3 variáveis        -  com coluna Value  [prev_1]
     X = dataset_1[['Value', 'Overall','Potential']]
     Y = dataset_1['Fee']
     modelo = LinearRegression()
@@ -328,40 +400,34 @@ while (a<len(dataset_1['ID'])):
     a+=1
 
 
-# In[29]:
+# In[ ]:
 
 
-# THIS SECTION WILL BE USED FOR USER INPUT
+dataset_2.to_excel('dataset2.xlsx')
 
-valor = float(input("Insere o valor do jogador: "))
-nivel = int(input("Insere o nível do jogador (dois digitos): "))
-potencial = int(input("Insere o potencial do jogador (dois digitos): "))
 
+# In[ ]:
+
+
+# Create model again with 3 variables
 X = dataset_1[['Value','Overall','Potential']]
 Y = dataset_1['Fee']
 modelo = LinearRegression()
 modelo.fit(X,Y)
 modelo.coef_
 
+
+# In[ ]:
+
+
+# User Input
+valor = float(input("Insere o valor do jogador: "))
+nivel = int(input("Insere o nível do jogador (dois digitos): "))
+potencial = int(input("Insere o potencial do jogador (dois digitos): "))
+
 prev = np.array([valor,nivel,potencial]) # prever o fee usando dois valores, value (x1) e overall (x2) e potential (x3)
 prev = prev.reshape(1,-1)
 preco = modelo.predict(prev)
 int(preco)
 print('O valor estimado do jogador: ', int(preco))
-
-
-# In[ ]:
-
-
-# Documentation
-#-> Don't forget to mention the dataset_2.xlxs of transfers that are within the range of 10%
-#-> use dataset 2021 with the following players to show it's effectivness(!! use transfermarkt.com to get actual value, use excel file to get level and potential):
-  # Nathan Aké
-  # 
-
-
-# In[ ]:
-
-
-#dataset_2.to_excel('dataset_2.xlsx')
 
